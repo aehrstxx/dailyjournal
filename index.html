@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jurnal Harianku 📖</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #faf7f2;
+    --warm-white: #fffef9;
+    --ink: #1a1612;
+    --ink-light: #5a5248;
+    --ink-faint: #a09890;
+    --accent: #c8785a;
+    --accent-light: #f0ddd5;
+    --accent-pale: #fdf5f2;
+    --gold: #d4a853;
+    --border: #e8e0d8;
+    --shadow: rgba(26,22,18,0.08);
+    --green: #4caf50;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Layout */
+  .app {
+    display: flex;
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 280px;
+    background: var(--ink);
+    color: var(--cream);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    z-index: 50;
+    overflow: hidden;
+  }
+
+  .sidebar.open { transform: translateX(0); }
+
+  .sidebar-header {
+    padding: 24px 20px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    flex-shrink: 0;
+  }
+
+  .sidebar-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    margin-bottom: 4px;
+  }
+
+  .sidebar-sub {
+    font-size: 11px;
+    opacity: 0.5;
+    letter-spacing: 1px;
+  }
+
+  .sidebar-entries {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 0;
+  }
+
+  .sidebar-entries::-webkit-scrollbar { width: 4px; }
+  .sidebar-entries::-webkit-scrollbar-track { background: transparent; }
+  .sidebar-entries::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+  .entry-item {
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-left: 3px solid transparent;
+  }
+
+  .entry-item:hover { background: rgba(255,255,255,0.06); }
+  .entry-item.active { background: rgba(200,120,90,0.2); border-left-color: var(--accent); }
+
+  .entry-date {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 3px;
+  }
+
+  .entry-preview {
+    font-size: 11px;
+    opacity: 0.45;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .entry-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .entry-mood-tag {
+    font-size: 10px;
+    opacity: 0.7;
+  }
+
+  .entry-stars {
+    font-size: 9px;
+    opacity: 0.5;
+  }
+
+  .sidebar-empty {
+    padding: 32px 20px;
+    text-align: center;
+    opacity: 0.4;
+    font-size: 12px;
+    line-height: 1.8;
+  }
+
+  .sidebar-footer {
+    padding: 16px 20px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    flex-shrink: 0;
+  }
+
+  .new-entry-btn {
+    width: 100%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 11px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .new-entry-btn:hover { background: #b5674a; }
+
+  /* Overlay */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 49;
+    backdrop-filter: blur(2px);
+  }
+
+  .overlay.show { display: block; }
+
+  /* Main */
+  .main {
+    flex: 1;
+    padding: 40px 20px 100px;
+    max-width: 760px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  /* Top bar */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 36px;
+  }
+
+  .menu-btn {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+  }
+
+  .menu-btn:hover { background: var(--accent-light); border-color: var(--accent); }
+
+  .top-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .save-indicator {
+    font-size: 11px;
+    color: var(--ink-faint);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .save-indicator.show { opacity: 1; }
+  .save-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+  /* Header */
+  .journal-header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+
+  .journal-header::after {
+    content: '✦';
+    position: absolute;
+    bottom: -11px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--cream);
+    padding: 0 12px;
+    color: var(--accent);
+    font-size: 13px;
+  }
+
+  .journal-label {
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 12px;
+  }
+
+  .journal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 40px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.1;
+    margin-bottom: 8px;
+  }
+
+  /* Date bar */
+  .date-bar {
+    background: var(--ink);
+    color: var(--cream);
+    border-radius: 16px;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .date-display {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+  }
+
+  .date-input-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .date-input-group input[type="date"] {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    padding: 7px 12px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    outline: none;
+  }
+
+  .date-input-group input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.6;
+  }
+
+  /* Mood */
+  .mood-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  .mood-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    width: 100%;
+    margin-bottom: 2px;
+  }
+
+  .mood-btn {
+    background: var(--warm-white);
+    border: 1.5px solid var(--border);
+    border-radius: 100px;
+    padding: 7px 16px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--ink-light);
+  }
+
+  .mood-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .mood-btn.active { background: var(--accent); border-color: var(--accent); color: white; font-weight: 500; }
+
+  /* Rating */
+  .rating-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+
+  .rating-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-right: 4px;
+  }
+
+  .star-btn {
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    transition: transform 0.15s;
+    line-height: 1;
+    filter: grayscale(1) opacity(0.3);
+  }
+  .star-btn:hover, .star-btn.active { filter: none; transform: scale(1.15); }
+
+  /* Cards */
+  .card {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 14px var(--shadow);
+    transition: box-shadow 0.2s;
+  }
+
+  .card:hover { box-shadow: 0 4px 22px var(--shadow); }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .card-icon {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .icon-green { background: #e8f5e9; }
+  .icon-blue { background: #e3f2fd; }
+  .icon-amber { background: #fff8e1; }
+  .icon-pink { background: #fce4ec; }
+  .icon-purple { background: #f3e5f5; }
+  .icon-teal { background: #e0f2f1; }
+
+  .card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .card-desc {
+    font-size: 11px;
+    color: var(--ink-faint);
+    margin-top: 1px;
+  }
+
+  textarea {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--ink-light);
+    resize: none;
+    outline: none;
+    min-height: 80px;
+  }
+
+  textarea::placeholder { color: var(--ink-faint); font-style: italic; }
+
+  /* Habit tracker */
+  .habits-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px;
+  }
+
+  .habit-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    background: var(--cream);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 12px;
+    color: var(--ink-light);
+    user-select: none;
+  }
+
+  .habit-item.done {
+    background: var(--accent-pale);
+    border-color: var(--accent-light);
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .habit-check {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px;
+    transition: all 0.2s;
+  }
+
+  .habit-item.done .habit-check {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  /* Photos */
+  .photo-zone {
+    border: 2px dashed var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    background: var(--accent-pale);
+  }
+
+  .photo-zone:hover { border-color: var(--accent); background: var(--accent-light); }
+  .photo-zone.has-photos { padding: 14px; cursor: default; }
+  .photo-zone-icon { font-size: 28px; margin-bottom: 8px; }
+  .photo-zone-text { font-size: 13px; color: var(--ink-faint); }
+  .photo-zone-subtext { font-size: 11px; color: var(--ink-faint); margin-top: 3px; }
+
+  .photos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .photo-thumb {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    background: var(--border);
+    cursor: pointer;
+  }
+
+  .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+  .photo-remove {
+    position: absolute;
+    top: 5px; right: 5px;
+    background: rgba(26,22,18,0.7);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px; height: 20px;
+    font-size: 10px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+    z-index: 2;
+  }
+
+  .photo-remove:hover { background: rgba(200,120,90,0.9); }
+
+  .add-more-photos {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--accent);
+    cursor: pointer;
+    padding: 7px;
+    border-radius: 8px;
+    transition: background 0.15s;
+  }
+
+  .add-more-photos:hover { background: var(--accent-light); }
+
+  input[type="file"] { display: none; }
+
+  /* Lightbox */
+  .lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .lightbox.show { display: flex; }
+
+  .lightbox img {
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: 8px;
+    object-fit: contain;
+  }
+
+  .lightbox-close {
+    position: fixed;
+    top: 20px; right: 24px;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    line-height: 1;
+    opacity: 0.8;
+    background: none;
+    border: none;
+  }
+
+  .lightbox-close:hover { opacity: 1; }
+
+  /* Save bar */
+  .save-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--warm-white);
+    border-top: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    z-index: 40;
+    box-shadow: 0 -4px 20px var(--shadow);
+  }
+
+  .btn {
+    padding: 11px 24px;
+    border-radius: 11px;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary { background: var(--ink); color: var(--cream); }
+  .btn-primary:hover { background: var(--accent); transform: translateY(-1px); }
+  .btn-secondary { background: var(--accent-pale); color: var(--accent); border: 1px solid var(--accent-light); }
+  .btn-secondary:hover { background: var(--accent-light); }
+  .btn-danger { background: #fff0f0; color: #e53935; border: 1px solid #ffcdd2; }
+  .btn-danger:hover { background: #ffcdd2; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-80px);
+    background: var(--ink);
+    color: var(--cream);
+    padding: 11px 22px;
+    border-radius: 100px;
+    font-size: 13px;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 200;
+    white-space: nowrap;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .stat-chip {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 7px 14px;
+    font-size: 12px;
+    color: var(--ink-light);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .stat-chip strong { color: var(--accent); }
+
+  /* Divider */
+  .divider {
+    text-align: center;
+    margin: 28px 0 20px;
+    position: relative;
+  }
+
+  .divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0; right: 0;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .divider span {
+    position: relative;
+    background: var(--cream);
+    padding: 0 14px;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  /* Delete entry */
+  .delete-entry-row {
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  .delete-entry-btn {
+    background: none;
+    border: none;
+    font-size: 12px;
+    color: var(--ink-faint);
+    cursor: pointer;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .delete-entry-btn:hover { background: #fff0f0; color: #e53935; }
+
+  @media (max-width: 520px) {
+    .journal-title { font-size: 32px; }
+    .date-bar { flex-direction: column; align-items: flex-start; }
+    .habits-grid { grid-template-columns: 1fr 1fr; }
+    .stats-bar { gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<!-- Sidebar overlay -->
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-title">📖 Jurnal Harianku</div>
+    <div class="sidebar-sub">RIWAYAT TULISAN</div>
+  </div>
+  <div class="sidebar-entries" id="sidebarEntries"></div>
+  <div class="sidebar-footer">
+    <button class="new-entry-btn" onclick="newEntry()">✏️ Entri Baru (Hari Ini)</button>
+  </div>
+</div>
+
+<div class="app">
+  <div class="main">
+
+    <!-- Top bar -->
+    <div class="top-bar">
+      <button class="menu-btn" onclick="toggleSidebar()" title="Riwayat Jurnal">📚</button>
+      <div class="top-right">
+        <div class="save-indicator" id="saveIndicator">
+          <div class="save-dot"></div> Tersimpan
+        </div>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <div class="journal-header">
+      <p class="journal-label">My Journal</p>
+      <h1 class="journal-title">Jurnal Harianku</h1>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-bar" id="statsBar"></div>
+
+    <!-- Date -->
+    <div class="date-bar">
+      <div class="date-display" id="dateDisplay"></div>
+      <div class="date-input-group">
+        <span style="font-size:12px;opacity:0.6">Tanggal:</span>
+        <input type="date" id="dateInput" onchange="changeDate(this.value)">
+      </div>
+    </div>
+
+    <!-- Mood -->
+    <div class="mood-row">
+      <p class="mood-label">😊 Mood hari ini</p>
+      <button class="mood-btn" onclick="selectMood(this)">😄 Bahagia</button>
+      <button class="mood-btn" onclick="selectMood(this)">😌 Tenang</button>
+      <button class="mood-btn" onclick="selectMood(this)">😐 Biasa</button>
+      <button class="mood-btn" onclick="selectMood(this)">😔 Sedih</button>
+      <button class="mood-btn" onclick="selectMood(this)">😤 Stres</button>
+      <button class="mood-btn" onclick="selectMood(this)">😴 Lelah</button>
+      <button class="mood-btn" onclick="selectMood(this)">🤩 Semangat</button>
+    </div>
+
+    <!-- Rating -->
+    <div class="rating-row">
+      <span class="rating-label">⭐ Rating hari</span>
+      <button class="star-btn" onclick="setRating(1)" id="star1">⭐</button>
+      <button class="star-btn" onclick="setRating(2)" id="star2">⭐</button>
+      <button class="star-btn" onclick="setRating(3)" id="star3">⭐</button>
+      <button class="star-btn" onclick="setRating(4)" id="star4">⭐</button>
+      <button class="star-btn" onclick="setRating(5)" id="star5">⭐</button>
+    </div>
+
+    <!-- Journal cards -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-amber">☀️</div>
+        <div><div class="card-title">Cerita Hariku</div><div class="card-desc">Apa yang terjadi hari ini?</div></div>
+      </div>
+      <textarea id="story" rows="5" placeholder="Hari ini aku... Mulai dari pagi, siang, hingga malam."></textarea>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-green">✅</div>
+        <div><div class="card-title">Pencapaian Hari Ini</div><div class="card-desc">Hal-hal yang berhasil dilakukan</div></div>
+      </div>
+      <textarea id="achievements" rows="4" placeholder="Aku berhasil... Sekecil apapun pencapaianmu, itu tetap berarti! ✨"></textarea>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-blue">💭</div>
+        <div><div class="card-title">Pikiran & Perasaan</div><div class="card-desc">Apa yang ada di benakmu?</div></div>
+      </div>
+      <textarea id="thoughts" rows="4" placeholder="Yang aku rasakan hari ini..."></textarea>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-pink">🙏</div>
+        <div><div class="card-title">Rasa Syukur</div><div class="card-desc">3 hal yang aku syukuri hari ini</div></div>
+      </div>
+      <textarea id="gratitude" rows="3" placeholder="1. Aku bersyukur untuk...
+2. Aku bersyukur untuk...
+3. Aku bersyukur untuk..."></textarea>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-purple">🎯</div>
+        <div><div class="card-title">Rencana Besok</div><div class="card-desc">Yang ingin aku capai besok</div></div>
+      </div>
+      <textarea id="tomorrow" rows="3" placeholder="Besok aku akan..."></textarea>
+    </div>
+
+    <!-- Habit Tracker -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-teal">🌱</div>
+        <div><div class="card-title">Habit Tracker</div><div class="card-desc">Kebiasaan harian yang sudah dilakukan</div></div>
+      </div>
+      <div class="habits-grid" id="habitsGrid">
+        <div class="habit-item" onclick="toggleHabit(this)" data-habit="💧 Minum air"><div class="habit-check"></div>💧 Minum air</div>
+        <div class="habit-item" onclick="toggleHabit(this)" data-habit="🏃 Olahraga"><div class="habit-check"></div>🏃 Olahraga</div>
+        <div class="habit-item" onclick="toggleHabit(this)" data-habit="📚 Baca buku"><div class="habit-check"></div>📚 Baca buku</div>
+        <div class="habit-item" onclick="toggleHabit(this)" data-habit="🧘 Meditasi"><div class="habit-check"></div>🧘 Meditasi</div>
+        <div class="habit-item" onclick="toggleHabit(this)" data-habit="🌙 Tidur cukup"><div class="habit-check"></div>🌙 Tidur cukup</div>
+        <div class="habit-item" onclick="toggleHabit(this)" data-habit="🥗 Makan sehat"><div class="habit-check"></div>🥗 Makan sehat</div>
+        <div class="habit-item" onclick="toggleHabit(this)" data-habit="📝 Journaling"><div class="habit-check"></div>📝 Journaling</div>
+        <div class="habit-item" onclick="toggleHabit(this)" data-habit="📵 Kurangi HP"><div class="habit-check"></div>📵 Kurangi HP</div>
+      </div>
+    </div>
+
+    <!-- Photo Upload -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-amber">📸</div>
+        <div><div class="card-title">Foto Hari Ini</div><div class="card-desc">Simpan momen berharga harimu</div></div>
+      </div>
+      <input type="file" id="photoInput" accept="image/*" multiple onchange="handlePhotos(event)">
+      <div class="photo-zone" id="photoZone" onclick="document.getElementById('photoInput').click()">
+        <div class="photo-zone-icon">🖼️</div>
+        <div class="photo-zone-text">Klik untuk upload foto</div>
+        <div class="photo-zone-subtext">JPG, PNG, HEIC — bisa pilih banyak sekaligus</div>
+      </div>
+    </div>
+
+    <div class="delete-entry-row">
+      <button class="delete-entry-btn" onclick="deleteCurrentEntry()">🗑️ Hapus entri ini</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Save Bar -->
+<div class="save-bar">
+  <button class="btn btn-secondary" onclick="clearForm()">↩️ Reset isian</button>
+  <button class="btn btn-primary" onclick="saveJournal()">💾 Simpan Jurnal</button>
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────
+  let currentDate = getTodayStr();
+  let currentRating = 0;
+  let photos = []; // base64 strings for current entry
+
+  const STORAGE_KEY = 'jurnalku_entries';
+
+  // ── Init ───────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', () => {
+    loadEntry(currentDate);
+    renderSidebar();
+    renderStats();
+    autoSaveSetup();
+  });
+
+  // ── Helpers ────────────────────────────────────────
+  function getTodayStr() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function formatDateDisplay(str) {
+    const d = new Date(str + 'T00:00:00');
+    const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+    const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  }
+
+  function getAllEntries() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+    catch { return {}; }
+  }
+
+  function saveAllEntries(data) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  // ── Load / Save entry ──────────────────────────────
+  function loadEntry(dateStr) {
+    currentDate = dateStr;
+    document.getElementById('dateInput').value = dateStr;
+    document.getElementById('dateDisplay').textContent = formatDateDisplay(dateStr);
+
+    const all = getAllEntries();
+    const entry = all[dateStr] || {};
+
+    // Text fields
+    ['story','achievements','thoughts','gratitude','tomorrow'].forEach(id => {
+      document.getElementById(id).value = entry[id] || '';
+    });
+
+    // Mood
+    document.querySelectorAll('.mood-btn').forEach(b => {
+      b.classList.toggle('active', b.textContent.trim() === (entry.mood || ''));
+    });
+
+    // Rating
+    currentRating = entry.rating || 0;
+    for (let i = 1; i <= 5; i++) {
+      document.getElementById('star' + i).classList.toggle('active', i <= currentRating);
+    }
+
+    // Habits
+    const doneHabits = entry.habits || [];
+    document.querySelectorAll('.habit-item').forEach(el => {
+      const done = doneHabits.includes(el.dataset.habit);
+      el.classList.toggle('done', done);
+      el.querySelector('.habit-check').textContent = done ? '✓' : '';
+    });
+
+    // Photos
+    photos = entry.photos || [];
+    renderPhotos();
+  }
+
+  function collectEntry() {
+    const mood = document.querySelector('.mood-btn.active')?.textContent.trim() || '';
+    const habits = [];
+    document.querySelectorAll('.habit-item.done').forEach(el => habits.push(el.dataset.habit));
+    return {
+      story: document.getElementById('story').value,
+      achievements: document.getElementById('achievements').value,
+      thoughts: document.getElementById('thoughts').value,
+      gratitude: document.getElementById('gratitude').value,
+      tomorrow: document.getElementById('tomorrow').value,
+      mood,
+      rating: currentRating,
+      habits,
+      photos,
+      updatedAt: Date.now()
+    };
+  }
+
+  function saveJournal() {
+    const all = getAllEntries();
+    all[currentDate] = collectEntry();
+    saveAllEntries(all);
+    renderSidebar();
+    renderStats();
+    showSaveIndicator();
+    showToast('✓ Jurnal tersimpan! 🌿');
+  }
+
+  // Auto-save on any input change
+  function autoSaveSetup() {
+    let timer;
+    const autoSave = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const all = getAllEntries();
+        all[currentDate] = collectEntry();
+        saveAllEntries(all);
+        renderSidebar();
+        renderStats();
+        showSaveIndicator();
+      }, 1200);
+    };
+
+    document.querySelectorAll('textarea').forEach(t => t.addEventListener('input', autoSave));
+  }
+
+  function showSaveIndicator() {
+    const el = document.getElementById('saveIndicator');
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2000);
+  }
+
+  // ── Date change ────────────────────────────────────
+  function changeDate(val) {
+    // Auto-save current before switching
+    const all = getAllEntries();
+    all[currentDate] = collectEntry();
+    saveAllEntries(all);
+    loadEntry(val);
+    renderSidebar();
+  }
+
+  function newEntry() {
+    closeSidebar();
+    changeDate(getTodayStr());
+  }
+
+  // ── UI interactions ────────────────────────────────
+  function selectMood(btn) {
+    document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function setRating(n) {
+    currentRating = n;
+    for (let i = 1; i <= 5; i++) {
+      document.getElementById('star' + i).classList.toggle('active', i <= n);
+    }
+  }
+
+  function toggleHabit(el) {
+    el.classList.toggle('done');
+    el.querySelector('.habit-check').textContent = el.classList.contains('done') ? '✓' : '';
+  }
+
+  // ── Photos ─────────────────────────────────────────
+  function handlePhotos(e) {
+    const files = Array.from(e.target.files);
+    let loaded = 0;
+    files.forEach(file => {
+      // Compress before storing
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX = 1200;
+          let w = img.width, h = img.height;
+          if (w > MAX || h > MAX) {
+            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+            else { w = Math.round(w * MAX / h); h = MAX; }
+          }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          photos.push(canvas.toDataURL('image/jpeg', 0.75));
+          loaded++;
+          if (loaded === files.length) renderPhotos();
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = '';
+  }
+
+  function renderPhotos() {
+    const zone = document.getElementById('photoZone');
+    if (photos.length === 0) {
+      zone.innerHTML = `
+        <div class="photo-zone-icon">🖼️</div>
+        <div class="photo-zone-text">Klik untuk upload foto</div>
+        <div class="photo-zone-subtext">JPG, PNG, HEIC — bisa pilih banyak sekaligus</div>`;
+      zone.classList.remove('has-photos');
+      zone.onclick = () => document.getElementById('photoInput').click();
+      return;
+    }
+    zone.classList.add('has-photos');
+    zone.onclick = null;
+    const grid = photos.map((src, i) => `
+      <div class="photo-thumb">
+        <img src="${src}" alt="foto ${i+1}" onclick="openLightbox(${i})">
+        <button class="photo-remove" onclick="removePhoto(event,${i})">✕</button>
+      </div>`).join('');
+    zone.innerHTML = `
+      <div class="photos-grid">${grid}</div>
+      <div class="add-more-photos" onclick="document.getElementById('photoInput').click()">
+        ➕ Tambah foto lagi
+      </div>`;
+  }
+
+  function removePhoto(e, idx) {
+    e.stopPropagation();
+    photos.splice(idx, 1);
+    renderPhotos();
+    if (photos.length === 0) {
+      document.getElementById('photoZone').onclick = () => document.getElementById('photoInput').click();
+    }
+  }
+
+  // Lightbox
+  function openLightbox(idx) {
+    document.getElementById('lightboxImg').src = photos[idx];
+    document.getElementById('lightbox').classList.add('show');
+  }
+
+  function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('show');
+  }
+
+  // ── Sidebar ────────────────────────────────────────
+  function renderSidebar() {
+    const all = getAllEntries();
+    const dates = Object.keys(all).sort().reverse();
+    const container = document.getElementById('sidebarEntries');
+
+    if (dates.length === 0) {
+      container.innerHTML = `<div class="sidebar-empty">Belum ada jurnal tersimpan.<br>Tulis entri pertamamu! 🌱</div>`;
+      return;
+    }
+
+    container.innerHTML = dates.map(d => {
+      const e = all[d];
+      const preview = (e.story || e.achievements || e.thoughts || '').slice(0, 50) || 'Entri kosong';
+      const stars = e.rating ? '⭐'.repeat(e.rating) : '';
+      const isActive = d === currentDate;
+      return `
+        <div class="entry-item ${isActive ? 'active' : ''}" onclick="loadEntryFromSidebar('${d}')">
+          <div class="entry-date">${formatDateDisplay(d)}</div>
+          <div class="entry-preview">${preview}${preview.length >= 50 ? '…' : ''}</div>
+          <div class="entry-meta">
+            ${e.mood ? `<span class="entry-mood-tag">${e.mood}</span>` : ''}
+            ${stars ? `<span class="entry-stars">${stars}</span>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function loadEntryFromSidebar(dateStr) {
+    // Save current first
+    const all = getAllEntries();
+    all[currentDate] = collectEntry();
+    saveAllEntries(all);
+    loadEntry(dateStr);
+    renderSidebar();
+    closeSidebar();
+  }
+
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('show');
+  }
+
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('show');
+  }
+
+  // ── Stats ──────────────────────────────────────────
+  function renderStats() {
+    const all = getAllEntries();
+    const dates = Object.keys(all);
+    if (dates.length === 0) {
+      document.getElementById('statsBar').innerHTML = '';
+      return;
+    }
+
+    const total = dates.length;
+    const ratings = dates.map(d => all[d].rating).filter(Boolean);
+    const avgRating = ratings.length ? (ratings.reduce((a,b) => a+b, 0) / ratings.length).toFixed(1) : '-';
+
+    // Streak
+    let streak = 0;
+    let d = new Date();
+    while (true) {
+      const str = d.toISOString().slice(0,10);
+      if (all[str]) { streak++; d.setDate(d.getDate()-1); }
+      else break;
+    }
+
+    document.getElementById('statsBar').innerHTML = `
+      <div class="stat-chip">📓 <strong>${total}</strong> entri</div>
+      <div class="stat-chip">⭐ Rata-rata <strong>${avgRating}</strong></div>
+      <div class="stat-chip">🔥 Streak <strong>${streak}</strong> hari</div>
+    `;
+  }
+
+  // ── Clear / Delete ─────────────────────────────────
+  function clearForm() {
+    if (!confirm('Reset semua isian hari ini? (Data tersimpan tidak akan terhapus)')) return;
+    ['story','achievements','thoughts','gratitude','tomorrow'].forEach(id => document.getElementById(id).value = '');
+    document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.habit-item').forEach(el => {
+      el.classList.remove('done');
+      el.querySelector('.habit-check').textContent = '';
+    });
+    currentRating = 0;
+    for (let i = 1; i <= 5; i++) document.getElementById('star'+i).classList.remove('active');
+    photos = [];
+    renderPhotos();
+    document.getElementById('photoZone').onclick = () => document.getElementById('photoInput').click();
+    showToast('↩️ Isian direset');
+  }
+
+  function deleteCurrentEntry() {
+    if (!confirm(`Hapus jurnal tanggal ${formatDateDisplay(currentDate)}? Tindakan ini tidak bisa dibatalkan.`)) return;
+    const all = getAllEntries();
+    delete all[currentDate];
+    saveAllEntries(all);
+    clearForm();
+    renderSidebar();
+    renderStats();
+    showToast('🗑️ Entri dihapus');
+  }
+
+  // ── Toast ──────────────────────────────────────────
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+</script>
+</body>
+</html>
